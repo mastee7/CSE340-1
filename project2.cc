@@ -100,9 +100,9 @@ bool hasHash(std::vector<string> &list)
 
 std::vector<string> FIRST_helper(std::vector<Token> tokens, int index, std::string original)
 {
-    if (index == tokens.size()) 
+    if (index == tokens.size() || tokens[index].lexeme == "") 
     {
-        first_hash_cache[tokens[index].lexeme] = true;
+        first_hash_cache[original] = true;
         return {};
     }
 
@@ -116,7 +116,10 @@ std::vector<string> FIRST_helper(std::vector<Token> tokens, int index, std::stri
     if (is_non_terminal(tokens[index].lexeme)) 
     {
         std::vector<string> first;
-        if (first_cache.count(tokens[index].lexeme) != 0) first = first_cache[tokens[index].lexeme];
+        if (first_cache.count(tokens[index].lexeme) != 0) 
+        {
+            first = first_cache[tokens[index].lexeme];
+        }
 
         to_return.insert(to_return.end(), first.begin(), first.end());
         if (first_hash_cache[tokens[index].lexeme])
@@ -154,16 +157,17 @@ std::vector<string>& FIRST(string key)
 
     first_cache[key] = to_cache;
 
-    if (!first_hash_cache[key]) first_hash_cache[key] = hasHash(to_cache);
+    // if (!first_hash_cache[key]) first_hash_cache[key] = hasHash(to_cache);
     return first_cache[key];
 }
 
 // Task 3
 void CalculateFirstSets()
 {
+    for (int i = 0; i < 10; i++)
+    {
     for (auto rule : rules) FIRST(rule.first);
-    for (auto rule : rules) FIRST(rule.first);
-    for (auto rule : rules) FIRST(rule.first);
+    }
 
     std::unordered_set<string> done_set;
     for (Token token : tokens)
@@ -173,7 +177,7 @@ void CalculateFirstSets()
 
         std::cout << "FIRST(";
         std::cout << token.lexeme;
-        std::cout << ")) = { ";
+        std::cout << ") = { ";
 
         std::vector<string> lexemes = FIRST(token.lexeme);
 
@@ -191,7 +195,7 @@ void CalculateFirstSets()
 
         for (Token t : tokens)
         {
-            if (t.token_type != ID) continue;
+            // if (t.token_type != ID) continue;
             if (is_non_terminal(t.lexeme)) continue;
             if (in_set.count(t.lexeme) == 0 || doof_set.count(t.lexeme) != 0) continue;
 
