@@ -164,7 +164,7 @@ std::vector<string>& FIRST(string key)
 // Task 3
 void CalculateFirstSets()
 {
-    for (int i = 0; i < 10; i++)
+    for (int i = 0; i < 100; i++)
     {
     for (auto rule : rules) FIRST(rule.first);
     }
