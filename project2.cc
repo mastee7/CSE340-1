@@ -16,9 +16,9 @@
 using namespace std;
 
 std::vector<Token> tokens;
-std::vector<std::pair<string, std::vector<Token>>> rules;
+std::vector<std::pair<string, std::vector<Token> > > rules;
 
-std::unordered_map<string, std::vector<string>> first_cache;
+std::unordered_map<string, std::vector<string> > first_cache;
 std::unordered_map<string, bool> first_hash_cache;
 
 std::vector<string>& FIRST(string key);
@@ -26,70 +26,90 @@ std::vector<string>& FIRST(string key);
 // read grammar
 void ReadGrammar()
 {
-    LexicalAnalyzer anal;
+    LexicalAnalyzer analyze;
 
+
+    // This will keep track of which rule we are referring to
     string current_rule = "";
+    // Vector that stores the tokens that belongs to a current token
     std::vector<Token> current_tokens;
     
     Token token;
     do
     {
-        token = anal.GetToken();
+        token = analyze.GetToken();
         if (token.token_type == TokenType::ARROW) continue;
-        tokens.push_back(token);
 
+        // keep track of the tokens that we acquired  at tokens
+        tokens.push_back(token);
+        // this will keep track of the tokens that belong to the current_rule
         current_tokens.push_back(token);
-        if (anal.peek(1).token_type == TokenType::ARROW)
+
+        if (analyze.peek(1).token_type == TokenType::ARROW)
         {
-            if (current_rule != "") rules.push_back({ current_rule, current_tokens});
+            // If there is a rule, then add it to the rules
+            if (current_rule != "") rules.push_back({current_rule, current_tokens});
             current_rule = token.lexeme;
             current_tokens.clear();
         }
 
     } while (token.token_type != TokenType::END_OF_FILE);  
-    if (current_rule != "") rules.push_back({ current_rule, current_tokens});
+    if (current_rule != "") rules.push_back({current_rule, current_tokens});
 
     // for (auto rule : rules) std::cout << rule.first << "\n";
     // std::cout << "\n\n\n\n\n\n";
 }
 
+
+// Auxiliary function for checking if it's a non_terminal
+// by accessing rule.first where it contains the rules of the grammar
 bool is_non_terminal(string text)
 {
     for (auto rule : rules) if (rule.first == text) return true;
     return false;
 }
 
-// Task 1
+// Task 1: Printing terminals and non_terminals
 void printTerminalsAndNoneTerminals()
 {
+    // set to keep track of the string terminals/non-terminals
     std::unordered_set<string> done_set;
 
-    // Print terminals
+    // Printing terminals
     for (auto token : tokens)
     {
+        // if the string is a non_terminal and it doesn't exist inside the set 
         if (!is_non_terminal(token.lexeme) && done_set.count(token.lexeme) == 0 && token.token_type == ID)
         {
             std::cout << token.lexeme << " ";
+            // if we have printed the terminal(string) then insert it into a set
             done_set.insert(token.lexeme);
         }
     }
     done_set.clear();
     
-    // Print nonterminals
+    // Printing nonterminals
     for (auto token : tokens)
     {
+        // We are printing the nonterminals(string) that doesn't exist inside the set 
         if (is_non_terminal(token.lexeme) && done_set.count(token.lexeme) == 0 && token.token_type == ID)
         {
             std::cout << token.lexeme << " ";
+            // if we have printed the non_terminal(string) then insert it into a set
             done_set.insert(token.lexeme);
         }
     }
 }
 
-// Task 2
+// Task 2: Eliminating usless symbols
 void RemoveUselessSymbols()
 {
-    cout << "2\n";
+    // 1. Calculate generating symbols (terminals and epsilon)
+    // Remove non-generating symbols
+
+    // 2. Determine reachable symbols
+    // Remove non-reachable symbols
+
 }
 
 bool hasHash(std::vector<string> &list)
