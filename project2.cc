@@ -10,6 +10,7 @@
 
 // ARS
 #include <vector>
+#include <set>
 #include <unordered_set>
 #include <unordered_map>
 
@@ -104,10 +105,85 @@ void printTerminalsAndNoneTerminals()
 // Task 2: Eliminating usless symbols
 void RemoveUselessSymbols()
 {
+    // set that is going to store all unique symbols
+    std::set<std::string> token_set;
+    for(auto token : tokens){
+        token_set.insert(token.lexeme);
+    }
+    // A unordered_map that is going to store all unique symbols
+    std::unordered_map<std::string, int> map;
+    int i = 0;
+    for(auto token : token_set){
+        map[token] = i;
+        i++;
+    }
+
+    // A vector that keeps track of generating symbols
+    std::vector<bool> genArr;
+    for(int i = 0; i < map.size(); i++)
+    {
+        genArr.push_back(false);
+    }
+
     // 1. Calculate generating symbols (terminals and epsilon)
+    for (auto token : tokens)
+    {
+        int i = 0;
+        // If token is a terminal then mark it as true
+        if(!is_non_terminal(token.lexeme))
+        {
+            if(map.find(token.lexeme) != map.end()){
+                i = map.at(token.lexeme);
+            }
+            genArr.at(i) = true;
+        }
+    }
+
+    // boolean that is keeping track of whether the genArr has altered
+    bool change = false;
+
+    do{
+        int i = 0;
+        int j = 0;
+        int k = 0;
+        // boolean that is going to keep track of whether the grammar is generating
+        bool check = false;
+        do{
+            // if the token is the non-terminal on LHS
+            if(tokens.at(i).lexeme == rules.at(j).first){
+                k = rules.at(j).second.size();
+                j++;
+                
+                while(k!=0)
+                {
+                    // if the RHS of the rule has a generating symbol
+                    if(genArr.at(i+k) == true) check = true;
+                    else    check = false;
+                    k--;
+                }
+            }
+            if(check){
+                change = true;
+                genArr.at(i) = check;
+            }
+            i++;
+        }
+        while(i<tokens.size());
+    }
+    while(change);
+
     // Remove non-generating symbols
+    // new_tokens vector that will contain tokens that are generating symbols
+    std::vector<Token> new_gen;
+    int i = 0;
+    for(bool b : genArr){
+        if(b)   new_gen.push_back(tokens.at(i));
+        i++;
+    }
 
     // 2. Determine reachable symbols
+
+
     // Remove non-reachable symbols
 
 }
