@@ -9,6 +9,7 @@
 #include "lexer.h"
 
 // ARS
+#include <utility>
 #include <vector>
 #include <set>
 #include <unordered_set>
@@ -108,6 +109,67 @@ void printTerminalsAndNoneTerminals()
             done_set.insert(token.lexeme);
         }
     }
+}
+
+
+// for(auto token : pairs.second){
+//     if(pairs.second.size() == 1 && pairs.second.at(0).token_type == TokenType::STAR){
+//         new_tokens.push_back("*");
+//     } else   new_tokens.push_back(token.lexeme);
+// }
+
+
+void reachable(std::vector<std::pair<string, std::vector<Token> > > new_rules, std::vector<bool> reachArr, std::unordered_map<std::string, int> new_map, std::string start)
+{
+    std::string str = "";
+    bool b = false;
+    //starting symbol with true
+    reachArr[new_map.at(new_rules.at(0).first)] = true;
+    for(auto pairs : new_rules)
+    { 
+        //debug 
+        cout << "Start with " << pairs.first << endl;
+
+        if(pairs.first == start){
+            if(pairs.second.size() == 1 && pairs.second.at(0).token_type == TokenType::STAR)    str = "*";
+            if(pairs.second.size() == 1)    b = true;
+            for(auto token : pairs.second){
+                if(token.token_type == TokenType::STAR)    continue;
+                else    str = token.lexeme;
+
+                //debug
+                cout << "change" << endl;
+                cout << str << endl;
+                cout << "index is " << new_map.at(str) << endl;
+
+                reachArr[new_map.at(str)] = true;
+
+                //Debug
+                cout << "printing after change" << endl;
+                for(auto b : reachArr)  cout << b << endl;
+
+                if(is_non_terminal(str))  {
+                    if(b || str == start){
+                        reachArr[new_map.at(str)] = true;
+                        break;
+                    }
+                    else{
+                        cout << "recursive call with " << str << endl;
+                        if(str != start) reachable(new_rules, reachArr, new_map, str);
+                    }
+                } else {
+                    reachArr[new_map.at(str)] = true;
+                    continue;
+                }
+            }
+        }
+    }
+    //Debug
+    cout << start << endl;
+    cout << "printing inside" << endl;
+    for(auto b : reachArr)  cout << b << endl;
+
+    return;
 }
 
 
@@ -241,6 +303,7 @@ void RemoveUselessSymbols()
         cout << endl;
     }
 
+
     // 2. Determine reachable symbols
     std::vector<std::string> new_tokens;
     // new_tokens vector that contains reachable tokens only
@@ -254,6 +317,46 @@ void RemoveUselessSymbols()
         }
     }
 
+    // set that is going to store all unique symbols
+    std::set<std::string> new_token_set;
+    for(auto token : new_tokens){
+        new_token_set.insert(token);
+    }
+
+    // A unordered_map that is going to store all unique symbols
+    std::unordered_map<std::string, int> new_map;
+    int new_i = 0;
+    for(auto token : new_token_set){
+        new_map[token] = new_i;
+        new_i++;
+    }
+
+    //Debug
+    cout << "Printing new map " << endl;
+    for(auto map : new_map){
+        cout << map.first << " with " << map.second << endl;
+    }
+
+    // A vector that keeps track of reachable symbols
+    std::vector<bool> reachArr;
+    for(int i = 0; i < new_map.size(); i++)
+    {
+        reachArr.push_back(false);
+    }
+
+    //Debug
+    cout << "printing before" << endl;
+    for(auto b : reachArr)  cout << b << endl;
+
+    std::string start = new_rules.at(0).first;
+    reachable(new_rules, reachArr, new_map, start);
+
+
+    //Debug
+    cout << "printing after" << endl;
+    for(auto b : reachArr)  cout << b << endl;
+
+
     //Debug
     cout << endl;
     for(auto str : new_tokens)  cout << str << "-";
@@ -262,6 +365,26 @@ void RemoveUselessSymbols()
 
 
     // Remove non-reachable symbols
+    // new_rules vector will contain rules that is useful
+    std::vector<std::pair<string, std::vector<Token> > > final_rules;
+    std::vector<std::pair<string, std::vector<Token> > >:: iterator new_pos;
+    final_rules = new_rules;
+    for(auto pairs : new_rules)
+    {
+        // If it's not reachable,
+        if(!reachArr.at(new_map.at(pairs.first))){
+            final_rules.erase(pos);
+        }
+        ++pos;
+    }
+
+    //Debug
+    std::cout << "8: Now printing final rule" << endl;
+    for(auto pair : final_rules){
+        cout << pair.first << " -> ";
+        for(auto token : pair.second)   cout << token.lexeme << " ";
+        cout << endl;
+    }
 
 }
 
