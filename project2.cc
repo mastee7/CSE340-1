@@ -102,14 +102,37 @@ void printTerminalsAndNoneTerminals()
     }
 }
 
+
 // Task 2: Eliminating usless symbols
 void RemoveUselessSymbols()
 {
+    std::vector<std::string> new_token;
+
     // set that is going to store all unique symbols
     std::set<std::string> token_set;
     for(auto token : tokens){
-        token_set.insert(token.lexeme);
+        if(token.token_type == TokenType::STAR) token_set.insert("*");
+        else    token_set.insert(token.lexeme);
+
+        // new_token will contain lexeme of the tokens
+        if(token.token_type == TokenType::STAR){
+            new_token.push_back("*");
+        } else {
+            new_token.push_back(token.lexeme);
+        }
     }
+
+    //Debug
+    for(string token : new_token)   cout<<token<<" ";
+    cout << endl;
+
+    // Debug
+    for(auto token : token_set)    std::cout << token << endl;
+    std::cout << token_set.size() << endl;
+
+    //Debug
+    std::cout << "So far good" << endl;
+
     // A unordered_map that is going to store all unique symbols
     std::unordered_map<std::string, int> map;
     int i = 0;
@@ -118,26 +141,39 @@ void RemoveUselessSymbols()
         i++;
     }
 
+    //Debug
+    for(auto map : map) cout << map.first << " " << map.second << endl;
+
+    //Debug
+    std::cout << "Now 2" << endl;
+
     // A vector that keeps track of generating symbols
     std::vector<bool> genArr;
     for(int i = 0; i < map.size(); i++)
     {
         genArr.push_back(false);
     }
+    
+    //Debug
+    std::cout << "Now 3" << endl;
 
     // 1. Calculate generating symbols (terminals and epsilon)
-    for (auto token : tokens)
+    for(string token : new_token)
     {
         int i = 0;
         // If token is a terminal then mark it as true
-        if(!is_non_terminal(token.lexeme))
+        if(!is_non_terminal(token))
         {
-            if(map.find(token.lexeme) != map.end()){
-                i = map.at(token.lexeme);
-            }
+            i = map.at(token);
             genArr.at(i) = true;
         }
     }
+
+    //Debug 
+    for(bool b : genArr)    cout << b << endl;
+
+    //Debug
+    std::cout << "Now 4" << endl;
 
     // boolean that is keeping track of whether the genArr has altered
     bool change = false;
@@ -148,37 +184,67 @@ void RemoveUselessSymbols()
         int k = 0;
         // boolean that is going to keep track of whether the grammar is generating
         bool check = false;
+
         do{
+            // if the RHS token(s) have terminal symbols only
+            // then mark that LHS symbol as generating
             // if the token is the non-terminal on LHS
-            if(tokens.at(i).lexeme == rules.at(j).first){
+            if(new_token.at(i) == rules.at(j).first && is_non_terminal(new_token.at(i)) && genArr.at(map.at(rules.at(j).first))){
+                // get the size of the rules that LHS is containing
                 k = rules.at(j).second.size();
                 j++;
                 
                 while(k!=0)
                 {
                     // if the RHS of the rule has a generating symbol
-                    if(genArr.at(i+k) == true) check = true;
-                    else    check = false;
+                    if(genArr.at(map.at(new_token.at(i+k)))) check = true;
+                    else check = false;
                     k--;
                 }
+
             }
+            // if the LHS is determined to be generating,
             if(check){
-                change = true;
-                genArr.at(i) = check;
+
+                // if the LHS was already true then no change has been made
+                if(genArr.at(map.at(new_token.at(i))) == true)  change = false;
+                else change = true;
+                genArr.at(map.at(new_token.at(i))) = check;
             }
             i++;
+
         }
-        while(i<tokens.size());
+        while(i<new_token.size());
     }
     while(change);
 
+    //Debug
+    std::cout << "5" << endl;
+
+
     // Remove non-generating symbols
-    // new_tokens vector that will contain tokens that are generating symbols
-    std::vector<Token> new_gen;
-    int i = 0;
-    for(bool b : genArr){
-        if(b)   new_gen.push_back(tokens.at(i));
-        i++;
+    // new_rules vector will contain rules that only contain generating symbols
+    std::vector<std::pair<string, std::vector<Token> > > new_rules;
+    std::vector<std::pair<string, std::vector<Token> > >:: iterator pos;
+    int i1 = 0;
+    new_rules = rules;
+    pos = new_rules.begin();
+
+    do{
+        for(auto token : new_rules.at(i1).second){
+            if(!genArr.at(map.at(token.lexeme)))    new_rules.erase(pos);
+        }
+        i1++;
+        ++pos;
+    }
+    while(i<new_rules.size());
+
+    //Debug
+    std::cout << "6" << endl;
+    for(auto pair : new_rules){
+        cout << pair.first << " -> ";
+        for(auto token : pair.second)   cout << token.lexeme << " ";
+        cout << endl;
     }
 
     // 2. Determine reachable symbols
