@@ -232,7 +232,7 @@ void DoRemoveUseless()
 
     for (auto rule : new_rules)
     {
-        if (reachable.count(rule.first) == 0)
+        if (reachable.count(rule.first) == 0 || terminates.count(rule.first) == 0)
         {
             is_useless = true;
             continue;
@@ -537,9 +537,25 @@ bool CheckIfGrammarHasPredictiveParser()
 {
     DoRemoveUseless();
 
-    std::cout << int(rules.size()) << "\n";
-    std::cout << int(new_rules.size()) << "\n";
+    
+    for (auto rule : new_rules)
+    {
+        if (reachable.count(rule.first) == 0)
+        {
+            is_useless = true;
+            continue;
+        }
+
+        int count = 0;
+        for (auto str : rule.second)
+        {
+            if (str.lexeme != "")
+                count++;
+        }
+    }
+
     if (is_useless) return false;
+    if (new_rules.size() != rules.size()) return false;
 
     CalculateFirstSets(true);
     CalculateFollowSets(true);
