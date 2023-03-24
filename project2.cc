@@ -24,40 +24,37 @@ std::vector<std::pair<string, std::vector<Token>>> rules;
 std::unordered_map<string, std::vector<string>> first_cache;
 std::unordered_map<string, bool> first_hash_cache;
 
-std::vector<string> &FIRST(string key);
+bool is_useless = false;
+std::unordered_set<std::string> reachable;
+std::vector<std::pair<string, std::vector<Token>>> new_rules;
+
+std::unordered_map<std::string, std::unordered_set<std::string>> globow;
 
 bool SyntaxCheck()
 {
     int index = 0;
     while (index < tokens.size())
     {
-        // std::cout << tokens[index].lexeme;
-
-        // if (tokens[index].token_type == ID) std::cout << " ID";
-        // if (tokens[index].token_type == ARROW) std::cout << " ARROW";
-        // if (tokens[index].token_type == HASH) std::cout << " HASH";
-        // if (tokens[index].token_type == STAR) std::cout << " STAR";
-        // if (tokens[index].token_type == END_OF_FILE) std::cout << " END_OF_FILE";
-        // if (tokens[index].token_type == ERROR) std::cout << " ERROR";
-
-        // std::cout << "\n";
-        // index++;
-
         if (index < tokens.size() && tokens[index].token_type == HASH)
         {
-            if (index + 1 < tokens.size() && tokens[index + 1].token_type == END_OF_FILE && index + 1 == tokens.size() - 1) return true;
+            if (index + 1 < tokens.size() && tokens[index + 1].token_type == END_OF_FILE && index + 1 == tokens.size() - 1)
+                return true;
             return false;
         }
 
-        if (index >= tokens.size() || tokens[index].token_type != ID) return false;
+        if (index >= tokens.size() || tokens[index].token_type != ID)
+            return false;
         index++;
 
-        if (index >= tokens.size() || tokens[index].token_type != ARROW) return false;
+        if (index >= tokens.size() || tokens[index].token_type != ARROW)
+            return false;
         index++;
 
-        while (index < tokens.size() && tokens[index].token_type == ID) index++;
+        while (index < tokens.size() && tokens[index].token_type == ID)
+            index++;
 
-        if (index >= tokens.size() || tokens[index].token_type != STAR) return false;
+        if (index >= tokens.size() || tokens[index].token_type != STAR)
+            return false;
         index++;
     }
     return true;
@@ -161,12 +158,10 @@ void printTerminalsAndNoneTerminals()
 //     } else   new_tokens.push_back(token.lexeme);
 // }
 
-// Task 2: Eliminating usless symbols
-void RemoveUselessSymbols()
+void DoRemoveUseless()
 {
     // Remove non-generating symbols
     // new_rules vector will contain rules that only contain generating symbols
-    std::vector<std::pair<string, std::vector<Token>>> new_rules;
     std::unordered_set<std::string> terminates;
 
     for (auto rule : rules)
@@ -188,7 +183,8 @@ void RemoveUselessSymbols()
                 if (terminates.count(token.lexeme) == 0)
                     success = false;
             }
-            if (success) terminates.insert(rule.first);
+            if (success)
+                terminates.insert(rule.first);
         }
     }
 
@@ -197,9 +193,11 @@ void RemoveUselessSymbols()
         bool success = true;
         for (auto token : rule.second)
         {
-            if (terminates.count(token.lexeme) == 0) success = false;
+            if (terminates.count(token.lexeme) == 0)
+                success = false;
         }
-        if (terminates.count(rule.first) != 0 && success) new_rules.push_back(rule);
+        if (terminates.count(rule.first) != 0 && success)
+            new_rules.push_back(rule);
     }
 
     // 2. Determine reachable symbols
@@ -207,7 +205,6 @@ void RemoveUselessSymbols()
         new_tokens;
 
     // Do BFS. Make sure there are no loops
-    unordered_set<std::string> reachable;
     queue<std::string> commands;
     reachable.insert(rules[0].first);
     commands.push(rules[0].first);
@@ -236,7 +233,24 @@ void RemoveUselessSymbols()
     for (auto rule : new_rules)
     {
         if (reachable.count(rule.first) == 0)
+        {
+            is_useless = true;
             continue;
+        }
+    }
+}
+
+// Task 2: Eliminating usless symbols
+void RemoveUselessSymbols()
+{
+    DoRemoveUseless();
+    for (auto rule : new_rules)
+    {
+        if (reachable.count(rule.first) == 0)
+        {
+            is_useless = true;
+            continue;
+        }
 
         cout << rule.first << " ->";
         for (auto token : rule.second)
@@ -304,8 +318,11 @@ std::vector<string> FIRST_helper(std::vector<Token> tokens, int index, std::stri
     }
 }
 
-std::vector<string> &FIRST(string key)
+std::vector<string> FIRST(string key)
 {
+    if (!is_non_terminal(key))
+        return {key};
+
     std::vector<string> to_return;
     for (auto rule : rules)
     {
@@ -328,18 +345,26 @@ std::vector<string> &FIRST(string key)
 
     first_cache[key] = to_cache;
 
-    // if (!first_hash_cache[key]) first_hash_cache[key] = hasHash(to_cache);
     return first_cache[key];
 }
 
 // Task 3
-void CalculateFirstSets()
+void CalculateFirstSets(bool stop)
 {
+    for (auto token : tokens)
+    {
+        if (!is_non_terminal(token.lexeme))
+            first_hash_cache[token.lexeme] = false;
+    }
+
     for (int i = 0; i < 100; i++)
     {
         for (auto rule : rules)
             FIRST(rule.first);
     }
+
+    if (stop)
+        return;
 
     std::unordered_set<string> done_set;
     for (Token token : tokens)
@@ -364,7 +389,7 @@ void CalculateFirstSets()
         }
 
         std::unordered_set<string> in_set;
-        std::unordered_set<string> doof_set;
+        std::unordered_set<string> dupe_set;
         for (string s : lexemes)
             in_set.insert(s);
 
@@ -373,14 +398,14 @@ void CalculateFirstSets()
             // if (t.token_type != ID) continue;
             if (is_non_terminal(t.lexeme))
                 continue;
-            if (in_set.count(t.lexeme) == 0 || doof_set.count(t.lexeme) != 0)
+            if (in_set.count(t.lexeme) == 0 || dupe_set.count(t.lexeme) != 0)
                 continue;
 
             if (!first)
                 std::cout << ", ";
             std::cout << t.lexeme;
 
-            doof_set.insert(t.lexeme);
+            dupe_set.insert(t.lexeme);
             first = false;
         }
 
@@ -390,20 +415,196 @@ void CalculateFirstSets()
     }
 }
 
+void add_to_set(std::unordered_set<std::string> &a, std::unordered_set<std::string> &b)
+{
+    for (std::string s : a)
+        b.insert(s);
+}
+
 // Task 4
-void CalculateFollowSets()
+void CalculateFollowSets(bool stop)
 {
     for (int i = 0; i < rules.size(); i++)
     {
         for (auto rule : rules)
             FIRST(rule.first);
     }
+
+    std::unordered_map<std::string, std::unordered_set<std::string>> follow;
+    for (auto rule : rules)
+        follow[rule.first] = {};
+
+    // Inserting the $ to starting symbol
+    follow[rules[0].first].insert("$");
+
+    for (int i = 0; i < rules.size(); i++)
+    {
+        // RULE II & RULE III
+        for (auto rule : rules)
+        {
+            int index = rule.second.size() - 1;
+            while (index >= 0)
+            {
+                if (index + 1 < rule.second.size() && !first_hash_cache[rule.second[index + 1].lexeme])
+                    break;
+                if (is_non_terminal(rule.second[index].lexeme))
+                    add_to_set(follow[rule.first], follow[rule.second[index].lexeme]);
+                index--;
+            }
+        }
+
+        // RULE IV
+        for (auto rule : rules)
+        {
+            bool check = false;
+            int index = 0;
+
+            for (int i = 0; i < rule.second.size(); i++)
+            {
+                if (check)
+                {
+                    vector<std::string> first = FIRST(rule.second[i].lexeme);
+                    for (auto str : first)
+                        follow[rule.second[i - 1].lexeme].insert(str);
+                    check = false;
+                }
+                else
+                    check = false;
+                if (is_non_terminal(rule.second[i].lexeme))
+                    check = true;
+            }
+        }
+
+        // RULE V
+        for (auto rule : rules)
+        {
+            for (int i = 0; i < rule.second.size(); i++)
+            {
+                for (int j = i + 1; j < rule.second.size(); j++)
+                {
+                    auto first = FIRST(rule.second[j].lexeme);
+                    for (auto str : first)
+                        follow[rule.second[i].lexeme].insert(str);
+                    if (!first_hash_cache[rule.second[j].lexeme])
+                        break;
+                }
+            }
+        }
+    }
+
+    if (stop)
+        return;
+    // PRINT IT
+    std::unordered_set<std::string> done_set;
+    for (auto token1 : tokens)
+    {
+        if (!is_non_terminal(token1.lexeme))
+            continue;
+        if (done_set.count(token1.lexeme) != 0)
+            continue;
+        done_set.insert(token1.lexeme);
+
+        std::cout << "FOLLOW(" << token1.lexeme << ") = { ";
+
+        bool first = true;
+        if (follow[token1.lexeme].count("$") != 0)
+        {
+            std::cout << "$";
+            first = false;
+        }
+
+        std::unordered_set<std::string> dupe_set = follow[token1.lexeme];
+        for (auto token : tokens)
+        {
+            if (dupe_set.count(token.lexeme) == 0)
+                continue;
+            if (!first)
+                std::cout << ", ";
+
+            std::cout << token.lexeme;
+
+            dupe_set.erase(token.lexeme);
+
+            first = false;
+        }
+
+        std::cout << " }\n";
+    }
 }
 
 // Task 5
-void CheckIfGrammarHasPredictiveParser()
+bool CheckIfGrammarHasPredictiveParser()
 {
-    cout << "5\n";
+    DoRemoveUseless();
+
+    std::cout << int(rules.size()) << "\n";
+    std::cout << int(new_rules.size()) << "\n";
+    if (is_useless) return false;
+
+    CalculateFirstSets(true);
+    CalculateFollowSets(true);
+
+    // CONDITION 1
+    for (int i = 0; i < rules.size(); i++)
+    {
+        unordered_set<std::string> set_1;
+
+        int index1 = 0;
+        bool falsed = false;
+        while (index1 < rules[i].second.size())
+        {
+            auto a = FIRST(rules[i].second[index1].lexeme);
+            for (auto b : a)
+                set_1.insert(b);
+
+            if (first_hash_cache[rules[i].second[index1].lexeme])
+                falsed = true;
+            if (!first_hash_cache[rules[i].second[index1].lexeme] || !is_non_terminal(rules[i].second[index1].lexeme))
+                break;
+
+            index1++;
+        }
+
+        for (int j = i + 1; j < rules.size(); j++)
+        {
+            if (rules[j].first != rules[i].first)
+                continue;
+
+            int index2 = 0;
+            while (index2 < rules[j].second.size())
+            {
+                auto a = FIRST(rules[j].second[index2].lexeme);
+                for (auto b : a)
+                    if (set_1.count(b) != 0)
+                        return false;
+
+                if (falsed && first_hash_cache[rules[j].second[index2].lexeme])
+                    return false;
+                if (!first_hash_cache[rules[j].second[index2].lexeme] || !is_non_terminal(rules[j].second[index2].lexeme))
+                    break;
+                index2++;
+            }
+        }
+    }
+
+    // CONDITION 2
+    for (auto rule : rules)
+    {
+        if (first_hash_cache[rule.first])
+        {
+            unordered_set<std::string> first_a;
+            unordered_set<std::string> follow_a = globow[rule.first];
+
+            if (follow_a.count("$") != 0) return false;
+
+            vector<std::string> first_a_vect = FIRST(rule.first);
+            for (auto a : first_a_vect)
+                if (follow_a.count(a) != 0)
+                    return false;
+        }
+    }
+
+    return true;
 }
 
 int main(int argc, char *argv[])
@@ -419,7 +620,7 @@ int main(int argc, char *argv[])
     /*
        Note that by convention argv[0] is the name of your executable,
        and the first argument to your program is stored in argv[1]
-     */
+    */
 
     task = atoi(argv[1]);
 
@@ -444,15 +645,18 @@ int main(int argc, char *argv[])
         break;
 
     case 3:
-        CalculateFirstSets();
+        CalculateFirstSets(false);
         break;
 
     case 4:
-        CalculateFollowSets();
+        CalculateFollowSets(false);
         break;
 
     case 5:
-        CheckIfGrammarHasPredictiveParser();
+        if (CheckIfGrammarHasPredictiveParser())
+            std::cout << "YES";
+        else
+            std::cout << "NO";
         break;
 
     default:
