@@ -3,6 +3,13 @@
  *               Rida Bazzi 2019
  * Do not share this file with anyone
  */
+
+/*
+    Author: Noel Ngu, Woojeh Chung
+    CSE340 
+    Project #2: Predictive Parser
+*/
+
 #include <iostream>
 #include <cstdio>
 #include <cstdlib>
@@ -30,6 +37,7 @@ std::vector<std::pair<string, std::vector<Token>>> new_rules;
 
 std::unordered_map<std::string, std::unordered_set<std::string>> globow;
 
+// Function for checking syntax errors
 bool SyntaxCheck()
 {
     int index = 0;
@@ -158,12 +166,16 @@ void printTerminalsAndNoneTerminals()
 //     } else   new_tokens.push_back(token.lexeme);
 // }
 
+// A function that performs removing useless symbols
+// We have created a separate function so that we can utilize it for predictive parser
 void DoRemoveUseless()
 {
+    // 1. Calculate generating symbols
     // Remove non-generating symbols
     // new_rules vector will contain rules that only contain generating symbols
     std::unordered_set<std::string> terminates;
 
+    // insert temrinals to the set
     for (auto rule : rules)
     {
         for (auto token : rule.second)
@@ -173,6 +185,7 @@ void DoRemoveUseless()
         }
     }
 
+    // boolean success will be used to check if a terminal is generating
     for (int i = 0; i < rules.size() + 1; i++)
     {
         for (auto rule : rules)
@@ -244,6 +257,8 @@ void DoRemoveUseless()
 void RemoveUselessSymbols()
 {
     DoRemoveUseless();
+
+    // Printing out the result of removing useless symbols
     for (auto rule : new_rules)
     {
         if (reachable.count(rule.first) == 0)
@@ -318,6 +333,7 @@ std::vector<string> FIRST_helper(std::vector<Token> tokens, int index, std::stri
     }
 }
 
+// This is a helper function that will return a vector containing the first symbol
 std::vector<string> FIRST(string key)
 {
     if (!is_non_terminal(key))
@@ -395,7 +411,6 @@ void CalculateFirstSets(bool stop)
 
         for (Token t : tokens)
         {
-            // if (t.token_type != ID) continue;
             if (is_non_terminal(t.lexeme))
                 continue;
             if (in_set.count(t.lexeme) == 0 || dupe_set.count(t.lexeme) != 0)
